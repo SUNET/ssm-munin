@@ -13,21 +13,21 @@ class munin::params::node {
   $export_node    = 'enabled'
 
   case $::osfamily {
-    RedHat: {
+    'RedHat': {
       $config_root  = '/etc/munin'
       $log_dir      = '/var/log/munin-node'
       $service_name = 'munin-node'
       $package_name = 'munin-node'
       $plugin_share_dir = '/usr/share/munin/plugins'
     }
-    Debian: {
+    'Debian': {
       $config_root  = '/etc/munin'
       $log_dir      = '/var/log/munin'
       $service_name = 'munin-node'
       $package_name = 'munin-node'
       $plugin_share_dir = '/usr/share/munin/plugins'
     }
-    Solaris: {
+    'Solaris': {
       case $::operatingsystem {
         SmartOS: {
           $config_root  = '/opt/local/etc/munin'
