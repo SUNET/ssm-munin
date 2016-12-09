@@ -20,8 +20,30 @@
 # - config_root: the root directory of the munin master configuration.
 #   Default: /etc/munin on most platforms.
 #
-# - collect_nodes: 'enabled' or 'disabled' default 'enabled'.
-#   Makes puppetmaster collect exported node_definitions.
+# - collect_nodes: 'enabled' (default), 'disabled', 'mine' or
+#   'unclaimed'. 'enabled' makes the munin master collect all exported
+#   node_definitions. 'disabled' disables it. 'mine' makes the munin
+#   master collect nodes matching $munin::master::host_name, while
+#   'unclaimed' makes the munin master collect nodes not tagged with a
+#   host name.
+#
+# - dbdir: Path to the munin dbdir, where munin stores everything
+#
+# - htmldir: Path to where munin will generate HTML documents and
+#   graphs, used if graph_strategy is cron.
+#
+# - rundir: Path to directory munin uses for pid and lock files.
+#
+# - tls: 'enabled' or 'disabled' (default). Controls the use of TLS
+#   globally for master to node communications.
+#
+# - tls_certificate: Path to a file containing a TLS certificate. No
+#   default. Required if tls is enabled.
+#
+# - tls_private_key: Path to a file containing a TLS key. No default.
+#   Required if tls is enabled.
+#
+# - tls_verify_certificate: 'yes' (default) or 'no'.
 #
 # - extra_config: Extra lines of config to put in munin.conf.
 
@@ -31,7 +53,16 @@ class munin::master (
   $html_strategy    = $munin::params::master::html_strategy,
   $config_root      = $munin::params::master::config_root,
   $collect_nodes    = $munin::params::master::collect_nodes,
-  $extra_config     = $munin::params::master::extra_config,
+  $dbdir                  = $munin::params::master::dbdir,
+  $htmldir                = $munin::params::master::htmldir,
+  $logdir                 = $munin::params::master::logdir,
+  $rundir                 = $munin::params::master::rundir,
+  $tls                    = $munin::params::master::tls,
+  $tls_certificate        = $munin::params::master::tls_certificate,
+  $tls_private_key        = $munin::params::master::tls_private_key,
+  $tls_verify_certificate = $munin::params::master::tls_verify_certificate,
+  $host_name              = $munin::params::master::host_name,
+  $extra_config           = $munin::params::master::extra_config,
   ) inherits munin::params::master {
 
   if $node_definitions {
@@ -43,8 +74,26 @@ class munin::master (
   if $html_strategy {
     validate_re($html_strategy, [ '^cgi$', '^cron$' ])
   }
-  validate_re($collect_nodes,  [ '^enabled$', '^disabled$' ])
+  validate_re($collect_nodes, [ '^enabled$', '^disabled$', '^mine$',
+                                '^unclaimed$' ])
   validate_absolute_path($config_root)
+
+  validate_re($tls, [ '^enabled$', '^disabled$' ])
+
+  if $tls == 'enabled' {
+    validate_re($tls_verify_certificate, [ '^yes$', '^no$' ])
+    validate_absolute_path($tls_private_key)
+    validate_absolute_path($tls_certificate)
+  }
+
+  if $host_name {
+    validate_string($host_name)
+    if ! is_domain_name($host_name) {
+      fail('host_name should be a valid domain name')
+    }
+  }
+
+  validate_array($extra_config)
 
   # The munin package and configuration
   package { 'munin':
@@ -69,9 +118,11 @@ class munin::master (
     force   => true,
   }
 
-  if $collect_nodes == 'enabled' {
-    # Collect all exported node definitions
-    Munin::Master::Node_definition <<| mastername == $::fqdn or mastername == '' |>>
+  if $collect_nodes != 'disabled' {
+    class { '::munin::master::collect':
+      collect_nodes => $collect_nodes,
+      host_name     => $host_name,
+    }
   }
 
   # Create static node definitions

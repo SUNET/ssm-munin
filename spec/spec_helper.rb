@@ -1,40 +1,20 @@
-require 'rubygems'
 require 'puppetlabs_spec_helper/module_spec_helper'
+require 'rspec-puppet-facts'
+
+include RspecPuppetFacts
+
+require 'simplecov'
+require 'simplecov-console'
+
+SimpleCov.start do
+  add_filter '/spec'
+  add_filter '/vendor'
+  formatter SimpleCov::Formatter::MultiFormatter.new([
+    SimpleCov::Formatter::HTMLFormatter,
+    SimpleCov::Formatter::Console
+  ])
+end
 
 shared_context :unsupported do
-  let(:facts) do
-    {
-      :osfamily => 'Unsupported',
-      :fqdn     => 'testnode.example.com',
-    }
-  end
+  let(:facts) { { osfamily: 'Unsupported' } }
 end
-
-shared_context :Debian do
-  let(:facts) do
-    {
-      :osfamily => 'Debian',
-      :fqdn     => 'testnode.example.com',
-    }
-  end
-end
-
-shared_context :RedHat do
-  let(:facts) do
-    {
-      :osfamily => 'RedHat',
-      :fqdn     => 'testnode.example.com',
-    }
-  end
-end
-
-shared_context :SmartOS do
-  let(:facts) do
-    {
-      :operatingsystem => 'SmartOS',
-      :osfamily        => 'Solaris',
-      :fqdn            => 'testnode.example.com',
-    }
-  end
-end
-
